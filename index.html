@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Come stai?</title>
+  <style>
+    :root{
+      --bg-dark: #000;
+      --text-dark: #fff;
+      --bg-light: #fff;
+      --text-light: #000;
+      --green: #28a745;
+      --red: #dc3545;
+      --fast: 260ms;
+      --smooth: 520ms;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    /* Move content higher: align to start and add top padding */
+    body{
+      display:flex;
+      align-items:flex-start;          /* place content toward the top */
+      justify-content:center;          /* keep horizontal centering */
+      padding-top:10vh;                /* adjust this value to move higher/lower */
+      min-height:100vh;
+      background:var(--bg-dark);
+      color:var(--text-dark);
+      transition: background var(--smooth) cubic-bezier(.2,.8,.2,1), color var(--smooth) cubic-bezier(.2,.8,.2,1);
+    }
+
+    .card{
+      text-align:center;
+      padding:40px 24px;
+      border-radius:12px;
+      width:min(720px, 94vw);
+      box-sizing:border-box;
+      position:relative;
+      /* subtle lift so the heading reads comfortably from the top */
+      transform: translateZ(0);
+    }
+
+    h1{
+      margin:0 0 28px 0;
+      font-size:clamp(28px, 6vw, 44px);
+      line-height:1.1;
+      user-select:none;
+      transition: opacity var(--fast) ease, transform var(--fast) ease;
+      will-change: opacity, transform;
+    }
+
+    .controls{
+      display:flex;
+      gap:18px;
+      justify-content:center;
+      align-items:center;
+      transition: opacity var(--fast) ease, transform var(--fast) ease;
+      will-change: opacity, transform;
+    }
+
+    button{
+      cursor:pointer;
+      border:0;
+      color:white;
+      padding:12px 20px;
+      font-size:18px;
+      border-radius:10px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+      transition: transform var(--fast) ease, box-shadow var(--fast) ease, opacity var(--fast) ease, filter var(--fast) ease;
+      will-change: transform, opacity;
+      background-origin: border-box;
+    }
+
+    .btn-good{
+      background: linear-gradient(180deg, #38d75f, var(--green));
+    }
+    .btn-bad{
+      background: linear-gradient(180deg, #ff7b7b, var(--red));
+    }
+
+    .btn-good.big{
+      transform: scale(2) translateY(-6px);
+      padding:22px 36px;
+      font-size:28px;
+      box-shadow: 0 22px 60px rgba(40,160,60,0.22);
+    }
+
+    body.good {
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+
+    .controls.hidden{
+      opacity:0;
+      transform: translateY(8px) scale(.98);
+      pointer-events:none;
+    }
+
+    .confetti-layer{
+      position:fixed;
+      pointer-events:none;
+      inset:0;
+      overflow:visible;
+      z-index:9999;
+    }
+
+    .confetti{
+      position:absolute;
+      font-size:20px;
+      will-change: transform, opacity;
+      animation: confettiFly var(--duration, 1400ms) cubic-bezier(.17,.85,.32,1) forwards;
+      opacity:0;
+      transform-origin:center;
+      user-select:none;
+      filter: drop-shadow(0 6px 10px rgba(0,0,0,0.12));
+    }
+
+    @keyframes confettiFly {
+      0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); opacity:1; }
+      60%  { opacity:1; }
+      100% { transform: translate3d(var(--tx), var(--ty), 0) rotate(var(--rot)) scale(var(--scale)); opacity:0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .confetti { animation: none !important; opacity:1; }
+      html { scroll-behavior: auto; }
+      body, .controls, h1, button { transition: none !important; }
+    }
+
+    @media (max-width:420px){
+      /* On small screens raise a bit less to keep visible area balanced */
+      body{ padding-top:6vh; }
+      .controls{ gap:12px; }
+      button{ font-size:16px; padding:10px 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card" role="main" aria-live="polite">
+    <h1 id="prompt">come stai?</h1>
+    <div class="controls" id="controls" aria-hidden="false">
+      <button id="goodBtn" class="btn-good" aria-pressed="false">sto bene</button>
+      <button id="badBtn" class="btn-bad">sto male</button>
+    </div>
+  </div>
+
+  <div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
+
+  <script>
+    (function () {
+      const goodBtn = document.getElementById('goodBtn');
+      const badBtn = document.getElementById('badBtn');
+      const prompt = document.getElementById('prompt');
+      const confettiLayer = document.getElementById('confettiLayer');
+      const controls = document.getElementById('controls');
+
+      let goodClicked = false;
+      let badClicked = false;
+
+      function onGoodClick() {
+        if (goodClicked) return;
+        goodClicked = true;
+
+        document.body.classList.add('good');
+
+        if (goodBtn) {
+          goodBtn.style.transition = 'opacity 260ms ease, transform 260ms ease';
+          goodBtn.style.opacity = '0';
+          goodBtn.style.transform = 'scale(.85) translateY(6px)';
+          goodBtn.setAttribute('aria-hidden', 'true');
+          setTimeout(() => {
+            if (goodBtn.parentNode) goodBtn.parentNode.removeChild(goodBtn);
+          }, 300);
+        }
+
+        controls.classList.add('hidden');
+        controls.setAttribute('aria-hidden', 'true');
+
+        prompt.style.transition = 'opacity 220ms ease, transform 320ms cubic-bezier(.2,.8,.2,1)';
+        prompt.style.opacity = '0';
+        prompt.style.transform = 'translateY(-6px)';
+        setTimeout(() => {
+          prompt.textContent = 'se vuoi parliamo 😀';
+          prompt.style.opacity = '1';
+          prompt.style.transform = 'translateY(0)';
+        }, 240);
+
+        launchConfettiEmojis(36);
+      }
+
+      function onBadClick() {
+        if (badClicked) return;
+        badClicked = true;
+
+        if (badBtn) {
+          badBtn.style.transition = 'opacity 260ms ease, transform 320ms ease';
+          badBtn.style.opacity = '0';
+          badBtn.style.transform = 'translateY(8px) scale(.95)';
+          badBtn.setAttribute('aria-hidden', 'true');
+          setTimeout(() => {
+            if (badBtn.parentNode) badBtn.parentNode.removeChild(badBtn);
+          }, 300);
+        }
+
+        if (goodBtn) {
+          goodBtn.classList.add('big');
+          goodBtn.animate([
+            { transform: 'scale(1) translateY(0)' },
+            { transform: 'scale(1.12) translateY(-6px)' },
+            { transform: 'scale(2) translateY(-6px)' }
+          ], {
+            duration: 420,
+            easing: 'cubic-bezier(.2,.8,.2,1)',
+            fill: 'forwards'
+          });
+          goodBtn.focus();
+        }
+      }
+
+      goodBtn.addEventListener('click', onGoodClick, { passive: true });
+      badBtn.addEventListener('click', onBadClick, { passive: true });
+
+      goodBtn.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') onGoodClick();
+      });
+      badBtn.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') onBadClick();
+      });
+
+      function launchConfettiEmojis(count = 30) {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          return;
+        }
+        const emojis = ['🎉', '🎊', '✨', '🥳', '💫', '🎈'];
+        const rect = document.body.getBoundingClientRect();
+        const originX = rect.width / 2;
+        const originY = rect.height / 2.5;
+
+        for (let i = 0; i < count; i++) {
+          const el = document.createElement('div');
+          el.className = 'confetti';
+          el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+
+          const size = 14 + Math.random() * 34;
+          el.style.fontSize = size + 'px';
+
+          const jitterX = (Math.random() - 0.5) * 120;
+          const jitterY = (Math.random() - 0.5) * 60;
+          el.style.left = (originX + jitterX) + 'px';
+          el.style.top = (originY + jitterY) + 'px';
+
+          const tx = ((Math.random() - 0.5) * 300 + (i % 2 === 0 ? -160 : 160)) + 'px';
+          const ty = (-220 - Math.random() * 380) + 'px';
+          const rot = (Math.random() * 720 - 360) + 'deg';
+          const scale = (0.8 + Math.random() * 1.4).toFixed(2);
+
+          el.style.setProperty('--tx', tx);
+          el.style.setProperty('--ty', ty);
+          el.style.setProperty('--rot', rot);
+          el.style.setProperty('--scale', scale);
+
+          const duration = 1000 + Math.random() * 1200;
+          const delay = Math.random() * 220;
+          el.style.setProperty('--duration', duration + 'ms');
+          el.style.animationDuration = duration + 'ms';
+          el.style.animationDelay = delay + 'ms';
+
+          confettiLayer.appendChild(el);
+
+          el.addEventListener('animationend', () => {
+            if (el.parentNode) el.parentNode.removeChild(el);
+          });
+
+          setTimeout(() => {
+            if (el.parentNode) el.parentNode.removeChild(el);
+          }, duration + delay + 500);
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
