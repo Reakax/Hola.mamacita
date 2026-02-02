@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Come stai?</title>
+  <style>
+    :root{
+      --bg-dark: #000;
+      --text-dark: #fff;
+      --bg-light: #fff;
+      --text-light: #000;
+      --green: #28a745;
+      --red: #dc3545;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    body{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:var(--bg-dark);
+      color:var(--text-dark);
+      transition: background 450ms ease, color 450ms ease;
+    }
+
+    .card{
+      text-align:center;
+      padding:40px 24px;
+      border-radius:12px;
+      width:min(680px, 92vw);
+      box-sizing:border-box;
+    }
+
+    h1{
+      margin:0 0 28px 0;
+      font-size:clamp(28px, 6vw, 44px);
+      line-height:1.1;
+      user-select:none;
+    }
+
+    .buttons{
+      display:flex;
+      gap:18px;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+
+    button{
+      cursor:pointer;
+      border:0;
+      color:white;
+      padding:12px 20px;
+      font-size:18px;
+      border-radius:10px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+      transition: transform 220ms ease, box-shadow 220ms ease, font-size 220ms ease, padding 220ms ease;
+    }
+
+    button:active{ transform: translateY(2px); }
+
+    .btn-good{
+      background: linear-gradient(180deg, #34d058, var(--green));
+    }
+    .btn-bad{
+      background: linear-gradient(180deg, #ff6b6b, var(--red));
+    }
+
+    /* big green state (used when red is clicked) */
+    .btn-good.big{
+      transform: scale(2.2);
+      padding:22px 36px;
+      font-size:28px;
+      box-shadow: 0 18px 40px rgba(40,160,60,0.25);
+    }
+
+    /* Good-clicked state: white background with black text */
+    body.good {
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+
+    /* confetti container (positioned relative to body for absolute children) */
+    .confetti-layer{
+      position:fixed;
+      pointer-events:none;
+      inset:0;
+      overflow:visible;
+      z-index:9999;
+    }
+
+    /* confetti piece */
+    .confetti{
+      position:absolute;
+      font-size:20px;
+      will-change: transform, opacity;
+      animation: fly 1400ms cubic-bezier(.2,.9,.2,1) forwards;
+      opacity:0;
+      transform-origin:center;
+      user-select:none;
+    }
+
+    @keyframes fly {
+      0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); opacity:1; }
+      60%  { opacity:1; }
+      100% { transform: translate3d(var(--tx), var(--ty), 0) rotate(var(--rot)) scale(var(--scale)); opacity:0; }
+    }
+
+    /* small helper to center buttons on small screens */
+    @media (max-width:420px){
+      .buttons{ gap:12px; }
+      button{ font-size:16px; padding:10px 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card" role="main" aria-live="polite">
+    <h1 id="prompt">come stai?</h1>
+    <div class="buttons">
+      <button id="goodBtn" class="btn-good" aria-pressed="false">sto bene</button>
+      <button id="badBtn" class="btn-bad">sto male</button>
+    </div>
+  </div>
+
+  <div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
+
+  <script>
+    const goodBtn = document.getElementById('goodBtn');
+    const badBtn = document.getElementById('badBtn');
+    const prompt = document.getElementById('prompt');
+    const confettiLayer = document.getElementById('confettiLayer');
+
+    // When green is clicked: switch to white background, black text, show message and confetti
+    function onGoodClick(){
+      // update UI text and body colors
+      document.body.classList.add('good');
+      prompt.textContent = 'se vuoi parliamo 😀';
+      goodBtn.setAttribute('aria-pressed','true');
+
+      // launch confetti (emojis flying out)
+      launchConfettiEmojis(40);
+    }
+
+    // When red is clicked: remove red button and make green button way bigger
+    function onBadClick(){
+      if (!badBtn) return;
+      // fade out and remove red button
+      badBtn.style.transition = 'opacity 260ms ease, transform 260ms ease';
+      badBtn.style.opacity = '0';
+      badBtn.style.transform = 'translateY(8px) scale(.95)';
+      // after animation, remove
+      setTimeout(()=> {
+        if (badBtn.parentNode) badBtn.parentNode.removeChild(badBtn);
+      }, 260);
+
+      // enlarge green button
+      goodBtn.classList.add('big');
+      // ensure focus still accessible
+      goodBtn.focus();
+    }
+
+    goodBtn.addEventListener('click', onGoodClick);
+    badBtn.addEventListener('click', onBadClick);
+
+    // Confetti implementation: spawn emoji elements that fly out from center
+    function launchConfettiEmojis(count = 30){
+      const emojis = ['🎉','🎊','✨','🥳','💫'];
+      const rect = document.body.getBoundingClientRect();
+      const originX = rect.width / 2;
+      const originY = rect.height / 2.5; // slightly above center
+
+      for (let i=0;i<count;i++){
+        const el = document.createElement('div');
+        el.className = 'confetti';
+        el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+
+        // randomize size
+        const size = 14 + Math.random()*30;
+        el.style.fontSize = size + 'px';
+
+        // set initial position around origin with small jitter
+        const jitterX = (Math.random() - 0.5) * 80;
+        const jitterY = (Math.random() - 0.5) * 40;
+        el.style.left = (originX + jitterX) + 'px';
+        el.style.top = (originY + jitterY) + 'px';
+
+        // randomize trajectory using CSS custom properties
+        // tx: horizontal translation, ty: vertical translation (negative to go upwards)
+        const tx = ((Math.random() - 0.5) * 120 + (i % 2 === 0 ? -120 : 120)) + 'px';
+        const ty = (-200 - Math.random()*300) + 'px';
+        const rot = (Math.random() * 720 - 360) + 'deg';
+        const scale = (0.8 + Math.random()*1.2).toFixed(2);
+
+        el.style.setProperty('--tx', tx);
+        el.style.setProperty('--ty', ty);
+        el.style.setProperty('--rot', rot);
+        el.style.setProperty('--scale', scale);
+
+        // random animation duration and delay
+        const duration = 1000 + Math.random()*1200;
+        const delay = Math.random()*250;
+        el.style.animationDuration = duration + 'ms';
+        el.style.animationDelay = delay + 'ms';
+
+        confettiLayer.appendChild(el);
+
+        // cleanup after animation
+        el.addEventListener('animationend', () => {
+          if (el.parentNode) el.parentNode.removeChild(el);
+        });
+      }
+    }
+
+    // Optional: allow keyboard activation (Enter/Space) for accessibility
+    goodBtn.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') onGoodClick();
+    });
+    badBtn.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') onBadClick();
+    });
+  </script>
+</body>
+</html>
