@@ -12,8 +12,8 @@
       --text-light: #000;
       --green: #28a745;
       --red: #dc3545;
-      --transition-fast: 320ms;
-      --transition-smooth: 600ms;
+      --fast: 260ms;
+      --smooth: 520ms;
     }
 
     html,body{
@@ -24,15 +24,13 @@
       -moz-osx-font-smoothing:grayscale;
     }
 
-    /* Page layout */
     body{
       display:flex;
       align-items:center;
       justify-content:center;
       background:var(--bg-dark);
       color:var(--text-dark);
-      transition: background var(--transition-smooth) cubic-bezier(.2,.8,.2,1),
-                  color var(--transition-smooth) cubic-bezier(.2,.8,.2,1);
+      transition: background var(--smooth) cubic-bezier(.2,.8,.2,1), color var(--smooth) cubic-bezier(.2,.8,.2,1);
     }
 
     .card{
@@ -49,17 +47,16 @@
       font-size:clamp(28px, 6vw, 44px);
       line-height:1.1;
       user-select:none;
-      transition: opacity var(--transition-fast) ease, transform var(--transition-fast) ease;
+      transition: opacity var(--fast) ease, transform var(--fast) ease;
       will-change: opacity, transform;
     }
 
-    /* Buttons container */
     .controls{
       display:flex;
       gap:18px;
       justify-content:center;
       align-items:center;
-      transition: opacity var(--transition-fast) ease, transform var(--transition-fast) ease;
+      transition: opacity var(--fast) ease, transform var(--fast) ease;
       will-change: opacity, transform;
     }
 
@@ -71,11 +68,10 @@
       font-size:18px;
       border-radius:10px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-      transition: transform var(--transition-fast) ease, box-shadow var(--transition-fast) ease, opacity var(--transition-fast) ease, filter var(--transition-fast) ease;
+      transition: transform var(--fast) ease, box-shadow var(--fast) ease, opacity var(--fast) ease, filter var(--fast) ease;
       will-change: transform, opacity;
+      background-origin: border-box;
     }
-
-    button:active{ transform: translateY(2px); }
 
     .btn-good{
       background: linear-gradient(180deg, #38d75f, var(--green));
@@ -84,7 +80,6 @@
       background: linear-gradient(180deg, #ff7b7b, var(--red));
     }
 
-    /* enlarged green (after red clicked) */
     .btn-good.big{
       transform: scale(2) translateY(-6px);
       padding:22px 36px;
@@ -92,20 +87,17 @@
       box-shadow: 0 22px 60px rgba(40,160,60,0.22);
     }
 
-    /* Good-clicked state: white background with black text */
     body.good {
       background: var(--bg-light);
       color: var(--text-light);
     }
 
-    /* When green clicked: fade out controls so text is fully visible */
     .controls.hidden{
       opacity:0;
       transform: translateY(8px) scale(.98);
       pointer-events:none;
     }
 
-    /* confetti container */
     .confetti-layer{
       position:fixed;
       pointer-events:none;
@@ -131,14 +123,12 @@
       100% { transform: translate3d(var(--tx), var(--ty), 0) rotate(var(--rot)) scale(var(--scale)); opacity:0; }
     }
 
-    /* Respect user's reduced motion preference */
     @media (prefers-reduced-motion: reduce) {
       .confetti { animation: none !important; opacity:1; }
       html { scroll-behavior: auto; }
       body, .controls, h1, button { transition: none !important; }
     }
 
-    /* small screens */
     @media (max-width:420px){
       .controls{ gap:12px; }
       button{ font-size:16px; padding:10px 14px; }
@@ -167,81 +157,77 @@
       let goodClicked = false;
       let badClicked = false;
 
-      // Smoothly hide the controls (so the text is fully visible) and remove the good button when clicked
+      // When green is clicked: disappear the green button (smoothly), show text and confetti
       function onGoodClick() {
         if (goodClicked) return;
         goodClicked = true;
 
-        // update body to light theme with smooth transition
+        // switch to light theme
         document.body.classList.add('good');
 
-        // update text
-        prompt.style.transition = 'opacity 260ms ease, transform 360ms cubic-bezier(.2,.8,.2,1)';
+        // fade out the good button smoothly and remove it so it's truly gone
+        if (goodBtn) {
+          goodBtn.style.transition = 'opacity 260ms ease, transform 260ms ease';
+          goodBtn.style.opacity = '0';
+          goodBtn.style.transform = 'scale(.85) translateY(6px)';
+          goodBtn.setAttribute('aria-hidden', 'true');
+          // remove after the animation completes
+          setTimeout(() => {
+            if (goodBtn.parentNode) goodBtn.parentNode.removeChild(goodBtn);
+          }, 300);
+        }
+
+        // hide remaining controls (including red if present) to let the text be fully visible
+        controls.classList.add('hidden');
+        controls.setAttribute('aria-hidden', 'true');
+
+        // change the prompt with a smooth fade/slide
+        prompt.style.transition = 'opacity 220ms ease, transform 320ms cubic-bezier(.2,.8,.2,1)';
         prompt.style.opacity = '0';
         prompt.style.transform = 'translateY(-6px)';
-
-        // after small delay, change text and fade back in
         setTimeout(() => {
           prompt.textContent = 'se vuoi parliamo 😀';
           prompt.style.opacity = '1';
           prompt.style.transform = 'translateY(0)';
-        }, 260);
+        }, 240);
 
         // launch confetti
         launchConfettiEmojis(36);
-
-        // hide controls smoothly (fade + slide) so the text is clearly visible
-        controls.classList.add('hidden');
-        controls.setAttribute('aria-hidden', 'true');
-
-        // Animate and remove the green button element itself after fade so it "disappears"
-        goodBtn.style.transition = 'opacity 420ms ease, transform 420ms ease';
-        goodBtn.style.opacity = '0';
-        goodBtn.style.transform = 'scale(.8) translateY(6px)';
-        goodBtn.setAttribute('aria-pressed', 'true');
-
-        setTimeout(() => {
-          if (goodBtn && goodBtn.parentNode) {
-            // remove only the good button (we already hid controls container for layout)
-            goodBtn.parentNode.removeChild(goodBtn);
-          }
-        }, 520);
       }
 
-      // When red is clicked: remove red button and enlarge green button smoothly
+      // When red is clicked: remove red button and enlarge green button
       function onBadClick() {
         if (badClicked) return;
         badClicked = true;
 
-        // fade out / slide the red button then remove it
-        badBtn.style.transition = 'opacity 260ms ease, transform 320ms ease';
-        badBtn.style.opacity = '0';
-        badBtn.style.transform = 'translateY(8px) scale(.95)';
-        setTimeout(() => {
-          if (badBtn && badBtn.parentNode) badBtn.parentNode.removeChild(badBtn);
-        }, 300);
+        if (badBtn) {
+          badBtn.style.transition = 'opacity 260ms ease, transform 320ms ease';
+          badBtn.style.opacity = '0';
+          badBtn.style.transform = 'translateY(8px) scale(.95)';
+          badBtn.setAttribute('aria-hidden', 'true');
+          setTimeout(() => {
+            if (badBtn.parentNode) badBtn.parentNode.removeChild(badBtn);
+          }, 300);
+        }
 
-        // enlarge the green button in a smooth animated way
-        goodBtn.classList.add('big');
-        // give a small springy effect
-        goodBtn.animate([
-          { transform: 'scale(1) translateY(0)' },
-          { transform: 'scale(1.12) translateY(-6px)' },
-          { transform: 'scale(2) translateY(-6px)' }
-        ], {
-          duration: 420,
-          easing: 'cubic-bezier(.2,.8,.2,1)',
-          fill: 'forwards'
-        });
-
-        // ensure focus remains usable
-        goodBtn.focus();
+        if (goodBtn) {
+          goodBtn.classList.add('big');
+          goodBtn.animate([
+            { transform: 'scale(1) translateY(0)' },
+            { transform: 'scale(1.12) translateY(-6px)' },
+            { transform: 'scale(2) translateY(-6px)' }
+          ], {
+            duration: 420,
+            easing: 'cubic-bezier(.2,.8,.2,1)',
+            fill: 'forwards'
+          });
+          goodBtn.focus();
+        }
       }
 
       goodBtn.addEventListener('click', onGoodClick, { passive: true });
       badBtn.addEventListener('click', onBadClick, { passive: true });
 
-      // keyboard accessibility
       goodBtn.addEventListener('keyup', (e) => {
         if (e.key === 'Enter' || e.key === ' ') onGoodClick();
       });
@@ -249,12 +235,10 @@
         if (e.key === 'Enter' || e.key === ' ') onBadClick();
       });
 
-      // Confetti implementation: spawn emoji elements that fly out from center with randomized properties
       function launchConfettiEmojis(count = 30) {
         if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-          return; // do not animate confetti for reduced motion users
+          return;
         }
-
         const emojis = ['🎉', '🎊', '✨', '🥳', '💫', '🎈'];
         const rect = document.body.getBoundingClientRect();
         const originX = rect.width / 2;
@@ -265,17 +249,14 @@
           el.className = 'confetti';
           el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
 
-          // random size
           const size = 14 + Math.random() * 34;
           el.style.fontSize = size + 'px';
 
-          // initial position with jitter
           const jitterX = (Math.random() - 0.5) * 120;
           const jitterY = (Math.random() - 0.5) * 60;
           el.style.left = (originX + jitterX) + 'px';
           el.style.top = (originY + jitterY) + 'px';
 
-          // trajectory
           const tx = ((Math.random() - 0.5) * 300 + (i % 2 === 0 ? -160 : 160)) + 'px';
           const ty = (-220 - Math.random() * 380) + 'px';
           const rot = (Math.random() * 720 - 360) + 'deg';
@@ -286,7 +267,6 @@
           el.style.setProperty('--rot', rot);
           el.style.setProperty('--scale', scale);
 
-          // duration & delay
           const duration = 1000 + Math.random() * 1200;
           const delay = Math.random() * 220;
           el.style.setProperty('--duration', duration + 'ms');
@@ -295,12 +275,10 @@
 
           confettiLayer.appendChild(el);
 
-          // cleanup
           el.addEventListener('animationend', () => {
             if (el.parentNode) el.parentNode.removeChild(el);
           });
 
-          // safety cleanup if animation didn't fire
           setTimeout(() => {
             if (el.parentNode) el.parentNode.removeChild(el);
           }, duration + delay + 500);
